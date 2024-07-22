@@ -1,0 +1,6 @@
+# GitIgnore file
+
+.idea
+
+# Data files
+data
