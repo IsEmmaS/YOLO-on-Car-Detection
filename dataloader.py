@@ -7,13 +7,15 @@ from PIL import Image
 
 DATA_PATH = "data/"
 CSV_PATH = "train_solution_bounding_boxes.csv"
+CONFIG_PATH = "yolov3.cfg"
 
 df = pd.read_csv(DATA_PATH + CSV_PATH)
-print(df.head())
 
 
 class OpenDataset(torch.utils.data.Dataset):
-
+    """
+    Open dataset class.
+    """
     def __init__(self, dataframe, data_path):
         """
         :param dataframe: dataframe is a pandas dataframe with images' box data
@@ -42,3 +44,34 @@ class OpenDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.files)
+
+
+def config_reader(config_file):
+    """
+    Read config file.
+    :param config_file: path to config file
+    :return: blocks_info: list of blocks_info
+    """
+
+    # Delete any comments and empty lines from the config file
+    # Split the config file into blocks_info
+    # Each block is a dictionary with keys and values
+    file = open(config_file, 'r')
+    lines = file.readlines()
+    lines = [line.strip() for line in lines]
+    lines = [line for line in lines if len(line) > 0 and line[0] != '#']
+
+    blocks_info = []
+    block = {}
+    for idx, line in enumerate(lines):
+        if line[0] == '[':
+            if not len(block) == 0:
+                blocks_info.append(block)
+                block = {}
+            block['type'] = line[1:-1].strip()
+        else:
+            key, value = line.split('=')
+            block[key.strip()] = value.strip()
+    blocks_info.append(block)
+
+    return blocks_info
