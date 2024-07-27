@@ -4,3 +4,5 @@
 
 # Data files
 data
+yolov3.cfg
+yolov3.weights
