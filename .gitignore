@@ -1,6 +1,7 @@
 # GitIgnore file
 
 .idea
+__pycache__
 
 # Data files
 data
