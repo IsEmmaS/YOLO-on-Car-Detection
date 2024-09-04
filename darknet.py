@@ -84,9 +84,10 @@ class Darknet(nn.Module):
         """
         outputs = {}
         write = 0
-
+        index_of_detection = 0
         for index, model_info in enumerate(self.blocks_info[1:]):
             model_name = model_info['type']
+
             # print(index, model_name, end=':\t')
 
             if model_name == 'convolutional' or model_name == 'upsample':
@@ -115,6 +116,7 @@ class Darknet(nn.Module):
                 x = outputs[index - 1] + outputs[index + from_]
 
             elif model_name == 'yolo':
+                index_of_detection += 1
                 anchors = self.module_list[index][0].anchors
                 inp_dim = int(self.net_info['height'])
 
@@ -131,6 +133,7 @@ class Darknet(nn.Module):
                 else:
                     # Concatenate the YOLO layer outputs
                     detections = torch.cat(tensors=(detections, x), dim=1)
+                print(f"The {index_of_detection}th Output Shape: ", x.shape)
 
             outputs[index] = x
             # print(x.shape)
@@ -141,8 +144,9 @@ class Darknet(nn.Module):
 if __name__ == '__main__':
     # Take One Image as Input have a test
     from dataloader import OpenDataset, DATA_PATH, CSV_PATH, DEVICE
-    data = OpenDataset(dataframe=DATA_PATH+CSV_PATH, image_path=DATA_PATH + 'training_images/')
+
+    data = OpenDataset(dataframe=DATA_PATH + CSV_PATH, image_path=DATA_PATH + 'training_images/')
     module = Darknet(CONFIG_PATH).to(DEVICE)
     inp = data[2][0]
     pred = module(inp)
-    print(pred.shape)
+    print(f'Shape of Net Output: ', pred.shape)
