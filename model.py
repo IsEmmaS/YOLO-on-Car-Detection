@@ -136,14 +136,13 @@ def create_model(config_list, module_list=nn.ModuleList()):
     Create a model from config.
     :param config_list: List of all blocks config.
     :param module_list: ModuleList to add blocks in.
-    :return: Net info and Model.
+    :return: Net info and Model. module_list is model.
     """
     output_filters = []
     prev_filters = 3
     net_info = config_list[0]  # Captures the information about the input and pre-processing
 
     for index, info in enumerate(config_list[1:]):
-
         # check the type of block
         # create a new module for the block
         # append to module_list
@@ -155,7 +154,18 @@ def create_model(config_list, module_list=nn.ModuleList()):
     return net_info, module_list
 
 
+def compile_model():
+    """
+    Compile the model.
+    :return: module.
+    """
+    _config = config_reader(CONFIG_PATH)
+    _netinfo, compiled_model = create_model(_config)
+
+    return compiled_model
+
+
 if __name__ == '__main__':
     config = config_reader(CONFIG_PATH)
-    netinfo, module_list = create_model(config)
-    print(netinfo, module_list)
+    netinfo, model = create_model(config)
+    print(netinfo, model)

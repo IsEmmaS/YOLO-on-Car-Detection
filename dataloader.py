@@ -4,13 +4,21 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.autograd import Variable
+from torchvision import transforms as T
 
 # 数据路径定义
 DATA_PATH = "data/"
 CSV_PATH = "train_solution_bounding_boxes.csv"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# DEVICE = torch.device("cpu")
 # 读取CSV文件
 df = pd.read_csv(DATA_PATH + CSV_PATH)
+
+# 定义Transforms
+_transform = T.Compose([
+    T.ToTensor(),
+    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
 
 
 class OpenDataset(torch.utils.data.Dataset):
@@ -18,7 +26,7 @@ class OpenDataset(torch.utils.data.Dataset):
     自定义数据集类，用于加载和处理图像及其边界框数据。
     """
 
-    def __init__(self, dataframe, image_path):
+    def __init__(self, dataframe: pd.DataFrame, image_path: str, transforms: T = None):
         """
         初始化数据集。
 
@@ -32,6 +40,7 @@ class OpenDataset(torch.utils.data.Dataset):
         self.data = pd.read_csv(dataframe) if isinstance(dataframe, str) else dataframe
         self.image_path = image_path
         self.files = glob.glob(self.image_path + '*.jpg')  # 获取所有图像文件路径
+        self.transforms = transforms
 
     def __getitem__(self, index):
         """
@@ -41,6 +50,7 @@ class OpenDataset(torch.utils.data.Dataset):
         :return: 包含图像和边界框的变量。
         """
         # 获取图像名称和路径
+
         image_name = self.data.iloc[index]['image']
         image_path = self.image_path + image_name
 
@@ -51,18 +61,36 @@ class OpenDataset(torch.utils.data.Dataset):
         img = torch.from_numpy(img[np.newaxis, :, :, :]).float()
 
         # 获取边界框数据并归一化
-        data = self.data[self.data['image'] == image_name]
+        # Note : Use "data = self.data[self.data['image'] == image_name]" will get mutiple boxes for one image
+        data = self.data.iloc[index]
         box = data[['xmin', 'ymin', 'xmax', 'ymax']].values
         origin_size = img.shape[1:3]
         box = box * np.array([self.w / origin_size[0], self.h / origin_size[1]] * 2)
-
-        return Variable(img).to(DEVICE), box
+        # print(f'图形大小{img.shape}, 框 {box}')
+        return img, box
 
     def __len__(self):
         """
         返回数据集中样本的数量。
         """
-        return len(self.files)
+        return len(self.data['image'])
+
+    def collate_fn(self, batch):
+        """
+        自定义数据集的批处理函数。
+
+        :param batch: 一个批次的样本列表。
+        :return: 包含图像和边界框的变量。
+        """
+        images, boxes = zip(*batch)
+        # if self.transforms is not None:
+        #     images = [self.transforms(image) for image in images]
+        images = torch.stack(images, 0).to(DEVICE)
+        print(boxes)
+        boxes = np.array([np.array(box, dtype=np.float32) for box in boxes])
+        boxes = torch.from_numpy(np.vstack(boxes)).to(DEVICE, dtype=torch.float32)
+
+        return images, boxes
 
 
 def config_reader(config_file):
@@ -88,4 +116,4 @@ def config_reader(config_file):
     return blocks_info
 
 # 确保文件路径正确，然后可以实例化数据集并使用
-# dataset = OpenDataset(df, DATA_PATH)
+# dataset = OpenDataset(df, DATA_PATH+'/training_images')

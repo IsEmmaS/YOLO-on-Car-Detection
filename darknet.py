@@ -85,13 +85,14 @@ class Darknet(nn.Module):
         outputs = {}
         write = 0
         index_of_detection = 0
+        x = x.squeeze(1)  # 去掉channel维度
         for index, model_info in enumerate(self.blocks_info[1:]):
             model_name = model_info['type']
 
             # print(index, model_name, end=':\t')
-
             if model_name == 'convolutional' or model_name == 'upsample':
                 x = self.module_list[index](x)
+
             elif model_name == 'route':
                 layers = model_info['layers'].split(',')
                 layers = [int(i) for i in layers]
@@ -133,7 +134,7 @@ class Darknet(nn.Module):
                 else:
                     # Concatenate the YOLO layer outputs
                     detections = torch.cat(tensors=(detections, x), dim=1)
-                print(f"The {index_of_detection}th Output Shape: ", x.shape)
+                # print(f"The {index_of_detection}th Output Shape: ", x.shape)
 
             outputs[index] = x
             # print(x.shape)
@@ -147,6 +148,6 @@ if __name__ == '__main__':
 
     data = OpenDataset(dataframe=DATA_PATH + CSV_PATH, image_path=DATA_PATH + 'training_images/')
     module = Darknet(CONFIG_PATH).to(DEVICE)
-    inp = data[2][0]
+    inp = data[2][0].to(DEVICE)
     pred = module(inp)
     print(f'Shape of Net Output: ', pred.shape)
